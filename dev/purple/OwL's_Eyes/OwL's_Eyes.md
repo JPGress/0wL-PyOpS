@@ -5,23 +5,42 @@ OwL's Eyes is a tool for reconnaissance and intelligence gathering, based on the
 
 This script works in a way that the user can input a target and the script will gather information about the target and present it in a way that is easy to understand. The script is divided into modules with different objectives and tools aggregated from different sources, each module is responsible for gathering information about a specific aspect of the target. Work as a hub for OSINT tools to make the process of reconnaissance and intelligence gathering easier and more organized to a better understanding of the target and auxiliary PASM.
 
-The modules and their objectives are: 
-- Gather Victim Identity Information
-  - Name
-  - Username
-  - Email
-  - Social Medias
-  - Photos
-  - ...
-- Gather Victim Org Information
-  - Job Title
-  - Employee
-  - ... 
-- Gather Victim Digital Footprint
-  - ...
-- Gather Victim Information Persistence
-  - Google Alerts
-  
+Each function, called module, will be responsible for gathering information about a specific aspect of the target. Informational modules are the ones that gather information about the target, while attack modules are the ones that perform attacks against the target. As purple team tool, it will have both informational, attack and defensive modules.
+
+As a modular tool, it is possible to add new modules(functions) to the script in the future, each module will be responsible for gathering information about a specific aspect of the target.
+
+The modules and their objectives are:
+
+### Module 1: OPSEC & Infrastructure (The Foundation) Before any data collection, operator security must be guaranteed.
+- **Identity Isolation (Sock Puppets):** Creation of consistent personas (Cover Story) with temporary emails, generated avatars, and virtual phone numbers (burner accounts).
+- **Anonymization Layers (Network):** Use of chained routing via VPN, VPS (paid with cryptocurrencies), and Tor network.
+- **Fingerprinting Evasion:** Use of libraries that mimic real browsers (TLS handshake spoofing, such as JA3/JA4) and block tracking of Canvas, WebGL, and WebRTC (e.g., CanvasBlocker, uBlock Origin).
+
+### Module 2: Social Media Intelligence (SOCMINT) & Identity
+- **Username Correlation:** Use of automation to track the target's presence across hundreds of networks simultaneously (e.g., Sherlock, Maigret, WhatsMyName)
+- **Specific Service Analysis:** Validation of accounts linked to Google/Gmail to extract IDs, modification dates, and connections (e.g., Ghunt)
+- **Behavioral Profiling:** Natural Language Processing (NLP) to analyze tone of voice in tweets or LinkedIn, fundamental for creating personalized phishing attacks
+
+### Module 3: Digital Footprint & Devices
+- **Personal Infrastructure Tracking:** Domains registered in the target's name (reverse WHOIS), associated IP addresses, and personal servers
+- **Device Fingerprinting:** Passive collection of User-Agent, Operating System, and hardware configurations of the target, if they interact with our infrastructure
+
+### Module 4: Breach Hunting & Credential Leaks - Crucial new module for escalation. Password reuse is the human Achilles' heel.
+- **Leaked Database Search:** Automation of queries in leak repositories (e.g., Have I Been Pwned, DeHashed, IntelX) using tools like h8mail.
+- **Custom Dictionary Generation:** Creation of target-focused wordlists using tools like cupp, based on family names, pets, and birth dates extracted via OSINT.
+
+### Module 5: Information Monitoring and Persistence
+- **Active Alerts:** Configuration of Google Alerts, Talk Walker, Visual Ping, or extensions like Update Scanner to monitor changes on specific web pages or new mentions of the target's name.
+
+### Module 6: Social Engineering Mechanics (Optional/Attack)
+- **Reverse Proxy and AiTM:** Infrastructure preparation for Adversary-in-the-Middle (AiTM) attacks using modern frameworks (e.g., Tycoon 2FA) for session cookie theft and multi-factor authentication (MFA) bypass.
+
+### Module 7: Defensive Measures
+- **Defensive Measures:** Measures taken to protect the target from attacks. This module will be responsible for identifying vulnerabilities in the target's infrastructure and providing recommendations for improvement.
+- **Vulnerability Assessment:** Identification of vulnerabilities in the target's personal infrastructure.
+- **Security Recommendations:** Recommendations for improving the target's security posture aligned with the MITRE ATT&CK framework with mitigation and detection strategies.
+
+
 > [!note] **DISCLAIMER**
 > It is intended for educational, ethical hacking and penetration testing purposes only.
 
