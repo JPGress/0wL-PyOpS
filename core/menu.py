@@ -23,12 +23,20 @@ def render_menu():
 
     order = ["Red", "Blue", "Purple", "Misc"]
     
+    color_map = {
+        "Red": C.BG_RED,
+        "Blue": C.BG_BLUE,
+        "Purple": C.BG_MAGENTA,
+        "Misc": C.BG_GREEN
+    }
+    
     for group_name in order:
         tactics = groups.get(group_name, {})
         if not tactics:
             continue
             
-        print(f"\n {C.BG_RED}{C.WHITE} [ {group_name.upper()} TEAM ] {C.RESET}")
+        bg_color = color_map.get(group_name, C.BG_BLACK)
+        print(f"\n {bg_color}{C.WHITE} [ {group_name.upper()} TEAM ] {C.RESET}")
         
         for tactic, plugins in tactics.items():
             for p in plugins:
