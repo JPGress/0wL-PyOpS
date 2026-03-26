@@ -22,3 +22,26 @@
 [x] 5. **Documentation & Verification**
   - [x] Run automated discovery verification by executing `python3 pyops.py` to ensure the plugin is loaded correctly.
   - [x] Test the execution flow of the MVP modules.
+
+---
+
+# Phase 2: Full SOCMINT Implementation (Module 2)
+
+[x] 1. **Planning & Setup**
+  - [x] Define the scraping approach for Instagram and LinkedIn.
+  - [x] Add `instaloader`, `requests`, and `beautifulsoup4` to project requirements (if applicable) or ensure they are documented.
+
+[x] 2. **Instagram Implementation (`mod2_socmint.py`)**
+  - [x] Integrate `instaloader` to fetch profile data.
+  - [x] Implement Private Profile detection and OPSEC warning.
+  - [x] Implement Fast Mode (Bio, Stats, Captions/Photos).
+  - [x] Implement Complete Mode (Followers/Following extraction). Alert user about auth necessity.
+
+[x] 3. **LinkedIn Implementation (`mod2_socmint.py`)**
+  - [x] Implement robust `requests` + `bs4` fallback scraper for LinkedIn professional info.
+  - [x] Parse relevant career information (Title, Location, Company).
+
+[x] 4. **JSON Export & Integration**
+  - [x] Combine data into a structured Python dictionary.
+  - [x] Export to `<target>_socmint.json`.
+  - [x] Ensure formatting strictly uses `core.logger.log` and gracefully handles `KeyboardInterrupt`.

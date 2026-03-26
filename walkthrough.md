@@ -1,35 +1,27 @@
-# PyOpS Modular Refactoring Walkthrough
+# Walkthrough: Desenvolvimento do OwL's Eyes (Projeto Piloto)
 
-## Resumo das Alterações
-- O mockup base (`pyops.py`) monolítico foi refatorado em uma arquitetura flexível dividindo o projeto entre o `core/` e os `plugins/`.
-- Foi originado o arquivo `core/config.py` para isolar a classe de cores (ANSI) e as configurações de tela (Banners ASCII e metadados).
-- Foi implementado um padronizador de logs no pacote `core/logger.py` com atalhos de saída `info`, `warning`, `error` e `success`.
-- O mecanismo central de controle (`core/registry.py`) recebeu formatação autônoma em cache (`PluginRegistry`) designando que novos scripts declarados via herança da classe abstrata `plugins/base.py` insiram seus ponteiros na aplicação no momento da inicialização (separados por grupo e tática: *TA0043*, etc.).
-- O pacote de UI (`core/menu.py`) foi desenhado para renderizar os dados do registrador iterativamente sobre as strings `[ RED TEAM ]`, `[ BLUE TEAM ]`, `[ PURPLE TEAM ]` limitando-se unicamente aos mocks que de fato existem instalados.
-- Um controlador (`core/dispatcher.py`) passou a lidar com *loops* infinitos bloqueando interrupções sujas no teclado e invocando a função atrelada ao número fornecido nativamente pelo `input()`.
-- O entrypoint principal `pyops.py` agora trabalha com apenas 10 linhas abstraídas ligando as integrações modulares.
+## 📌 Resumo da Entrega
+Criamos a estrutura fundamental do módulo **OwL's Eyes** para ser utilizado como um projeto piloto do *Purple Team* no framework `0wL PyOpS`. Os objetivos estabelecidos e a arquitetura delineada na base intelectual original foram fielmente transplantados para o ecossistema local na forma de plugins auto-descobríveis.
 
-## O Que Foi Testado
-- **Renderização da UI e Auto-Discovery**: Verificou-se que o pacote importou e compilou automaticamente o arquivo mock em `plugins/attack/recon.py`, montou o cabeçalho dinâmico e desenhou um grupo **RED TEAM** expondo suas opções. 
-- **Execução do Dispatcher**: Validou-se a seleção do usuário `001`, que localizou e derivou seu callback interno sem intervenção de logs hardcoded, mostrando uma mescla eficiente das classes via terminal.
-- **Encerramento Controlado**: Teste do exit signal (`000`) foi aprovado, escapando do app elegadamente com as notificações do `logger`.
+## 🛠️ Mudanças Realizadas
 
-## Resultados da Validação
-```
-  [ RED TEAM ] 
+1. **Injeção no Ecossistema PyOpS:**
+   * Criado o arquivo `plugins/purple/owls_eyes.py` herdando da classe abstrata `BasePlugin`.
+   * Configurado com os Metadados: `PLUGIN_ID = "043"`, `NAME="Personal Attack Surface Management"`, `GROUP="Purple"` e `TACTIC="TA0043"`.
+   * Construído o **Hub Interativo**, um Sub-Menu CLI acionado pela função `run()` com suporte à saída suave `try-except KeyboardInterrupt`, integrando todos os 7 módulos subsequentes previstos pela teoria da ferramenta.
 
- [+] Network Scanning & Enumeration [TA0043]
-         - The adversary is trying to gather information they can use to plan future operations.
-         [001] Execute
-         ---
+2. **Modularização de Lógicas:**
+   * Criada a pasta `plugins/purple/owls_eyes_modules/` que funciona como o cérebro das funcionalidades. 
+   * A modularização permite que a ferramenta evolua futuramente permitindo múltiplos programadores atuarem de forma independente em diferentes áreas sem afetarem o arquivo primário.
+   * Criados arquivos vazios (Placeholders) com avisos de "Piloto" via `core.logger` para as demais features conceptuais (Módulos 1, 4, 5, 6 e 7).
 
- [>] Enter the option number (000 to exit): 001
-[+] Selected: Network Scanning & Enumeration
- [+] Running Mock Network Reconnaissance...
- [*] Mockup Mode: Action simulated.
- [+] Network Scan completed!
+3. **Construção do Minimum Viable Product (MVP):**
+   * **Module 2 (SOCMINT & Identity) [FASE 2 COMPLETA]**: 
+     - **Instagram**: Integrado via `instaloader`. Detecta perfis privados e sugere OPSEC (uso de sock puppets). No modo público, possui a Coleta **Rápida** (bio, followers, últimas 10 fotos e legendas) e a Coleta **Completa** (Itera centenas de seguidores/seguidos - *Requer sessão instaloader pré-configurada para não falhar com LoginRequired*).
+     - **LinkedIn**: Para evitar Auth-Walls extremas na coleta deslogada, usamos `requests` e `BeautifulSoup` para fazer *Google Dorking* no perfil (ex: `site:linkedin.com/in/ "user"`) e raspamos os snippets do Google com o resumo das atividades profissionais.
+     - **Arquivo .JSON**: Todas as informações são compiladas em tempo real em formato dict e salvas no disco sob a assinatura (e.g. `target_neymarjr_169..._socmint.json`).
+   * **Module 3 (Digital Footprint & Devices)**: Rastreamento similar implementado no arquivo `mod3_footprint.py`, colhendo entradas de domínio (*FQDN*) e registrando comemorações modulares simuladas.
 
- [>] Enter the option number (000 to exit): 000
- [+] Exiting...
-```
-A arquitetura encontra-se plenamente desacoplada e operacional, pronta para alocar novos scripts individualmente soltando-os nos diretórios-alvo em `plugins/`.
+## ✔️ Validação de Arquitetura
+
+O sistema de **Auto-Discovery** testado em `/pyops.py` identificou com êxito os metadados recém-criados, imprimindo as informações perfeitamente customizadas no CLI e listando `OwL's Eyes` sob a insígnia tática `[ PURPLE TEAM ]`. A escolha do sub-módulo gerencia o controle da interface de forma íntegra e bloqueia devidamente interações erradas, garantindo uma demonstração enxuta, confiável e limpa para qualquer evento de Pilot Project.
