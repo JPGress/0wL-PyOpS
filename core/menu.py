@@ -24,10 +24,10 @@ def render_menu():
     order = ["Red", "Blue", "Purple", "Misc"]
     
     color_map = {
-        "Red": C.BG_RED,
-        "Blue": C.BG_BLUE,
-        "Purple": C.BG_MAGENTA,
-        "Misc": C.BG_GREEN
+        "Red": (C.BG_RED, C.RED),
+        "Blue": (C.BG_BLUE, C.BLUE),
+        "Purple": (C.BG_MAGENTA, C.MAGENTA),
+        "Misc": (C.BG_GREEN, C.GREEN)
     }
     
     for group_name in order:
@@ -35,13 +35,13 @@ def render_menu():
         if not tactics:
             continue
             
-        bg_color = color_map.get(group_name, C.BG_BLACK)
+        bg_color, fg_color = color_map.get(group_name, (C.BG_BLACK, C.WHITE))
         print(f"\n {bg_color}{C.WHITE} [ {group_name.upper()} TEAM ] {C.RESET}")
         
         for tactic, plugins in tactics.items():
             for p in plugins:
-                print(f"\n {C.BRIGHT_GREEN}[+]{C.RESET}{C.RED} {p['name']} [{tactic}]{C.RESET}")
+                print(f"\n {C.BRIGHT_GREEN}[+]{C.RESET}{fg_color} {p['name']} [{tactic}]{C.RESET}")
                 print(f"         {C.GRAY}- {p['description']}{C.RESET}")
-                print(f"         {C.RED}[{p['id']}] {C.GRAY}Execute{C.RESET}")
+                print(f"         {fg_color}[{p['id']}]{C.RESET} {C.GRAY}Execute{C.RESET}")
                 print(f"         {C.GRAY}---{C.RESET}")
         print()
