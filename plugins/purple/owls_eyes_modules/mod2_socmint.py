@@ -11,14 +11,61 @@ try:
 except ImportError:
     DEPENDENCIES_OK = False
 
+def scrape_instagram_fallback(username):
+    log.warning(f"[!] Tentando coletar via visualizadores anônimos alternativos (ex: storiesig.info)...")
+    
+    # As an alternative, if we can't scrape Instaloader direct due to auth wall,
+    # we provide the URLs to the anonymous viewers as viable OSINT pivoting points for the operator,
+    # and attempt a basic scrape on an open anonymous viewer like picuki or dumpoir if possible.
+    
+    fallback_data = {
+        "platform": "instagram_anonymous",
+        "username": username,
+        "status": "Instaloader Blocked. Falling back to Anonymous Scrapers.",
+        "alternative_viewers_urls": [
+            f"https://storiesig.info/pt/{username}/",
+            f"https://dumpoir.com/v/{username}",
+            f"https://www.picuki.com/profile/{username}"
+        ]
+    }
+    
+    # Attempting to fetch basic HTML from dumpoir to parse bio/name as a proof of concept fallback
+    try:
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+        res = requests.get(f"https://dumpoir.com/v/{username}", headers=headers, timeout=10)
+        if res.status_code == 200:
+            soup = BeautifulSoup(res.text, 'html.parser')
+            user_info = soup.find('div', class_='user')
+            if user_info:
+                name_tag = user_info.find('h1')
+                bio_tag = user_info.find('div', class_='desc')
+                if name_tag:
+                    fallback_data["full_name"] = name_tag.text.strip()
+                if bio_tag:
+                    fallback_data["biography"] = bio_tag.text.strip()
+                log.success("[+] Metadados parciais extraídos via Dumpoir (Anonymous Viewer).")
+    except Exception as e:
+        log.debug(f"Erro no fallback do Dumpoir: {e}")
+        
+    return fallback_data
+
 def scape_instagram(username, mode):
     log.info(f"[*] Verificando perfil Instagram: {username}")
-    L = instaloader.Instaloader(quiet=True)
+    L = instaloader.Instaloader(quiet=True, max_connection_attempts=1)
     try:
         profile = instaloader.Profile.from_username(L.context, username)
+    except instaloader.exceptions.ProfileNotExistsException:
+        log.error(f"[-] Perfil '{username}' não existe ou Instagram bloqueou o IP (Ghost Ban).")
+        return scrape_instagram_fallback(username)
+    except instaloader.exceptions.ConnectionException:
+        log.error(f"[-] Conexão recusada pelo Instagram (Rate Limit/Auth Wall) para '{username}'.")
+        return scrape_instagram_fallback(username)
     except Exception as e:
+        if "Expecting value: line 1 column 1" in str(e):
+            log.error(f"[-] Instaloader bloqueado pelo Instagram (Anti-Bot Ativado) no perfil '{username}'.")
+            return scrape_instagram_fallback(username)
         log.error(f"Erro ao buscar '{username}' no Instagram: {e}")
-        return None
+        return scrape_instagram_fallback(username)
 
     data = {
         "platform": "instagram",
@@ -79,7 +126,10 @@ def scrape_linkedin(username):
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
     }
-    url = f"https://www.google.com/search?q=site:linkedin.com/in/+%22{username}%22"
+    
+    # Removemos as aspas estritas do Dorking e limpamos os hifens comuns de slugs
+    clean_query = username.replace("-", " ")
+    url = f"https://www.google.com/search?q=site:linkedin.com/in/+{clean_query}"
     
     try:
         response = requests.get(url, headers=headers)
@@ -113,6 +163,28 @@ def scrape_linkedin(username):
         return None
 
 
+import urllib.parse
+
+def extract_username(url_or_name, platform="ig"):
+    if not url_or_name:
+        return ""
+    if platform == "ig":
+        if "instagram.com" in url_or_name:
+            path = urllib.parse.urlparse(url_or_name).path
+            parts = [p for p in path.split('/') if p]
+            return parts[0] if parts else ""
+        return url_or_name.replace("@", "").strip()
+    else:
+        if "linkedin.com" in url_or_name:
+            path = urllib.parse.urlparse(url_or_name).path
+            parts = [p for p in path.split('/') if p]
+            if "in" in parts:
+                idx = parts.index("in")
+                if idx + 1 < len(parts):
+                    return parts[idx + 1]
+            return ""
+        return url_or_name.strip()
+
 def run():
     print()
     log.info("--- Módulo 2: SOCMINT & Identity ---")
@@ -126,8 +198,11 @@ def run():
     log.info("Insira os alvos para OSINT (Deixe em branco se não quiser rastrear aquela rede)")
     
     try:
-        ig_user = input("[>] Alvo no Instagram (ex: neymarjr): ").replace("@", "").strip()
-        in_user = input("[>] Alvo no LinkedIn (nome ou slug): ").strip()
+        ig_input = input("[>] Alvo no Instagram (Username ou URL do perfil): ").strip()
+        in_input = input("[>] Alvo no LinkedIn (Slug ou URL do perfil): ").strip()
+        
+        ig_user = extract_username(ig_input, "ig")
+        in_user = extract_username(in_input, "li")
 
         if not ig_user and not in_user:
             log.warning("Nenhum alvo definido. Operação cancelada.")

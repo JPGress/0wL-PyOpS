@@ -1,0 +1,17 @@
+{
+    "instagram": {
+        "platform": "instagram_anonymous",
+        "username": "srta._holanda",
+        "status": "Instaloader Blocked. Falling back to Anonymous Scrapers.",
+        "alternative_viewers_urls": [
+            "https://storiesig.info/pt/srta._holanda/",
+            "https://dumpoir.com/v/srta._holanda",
+            "https://www.picuki.com/profile/srta._holanda"
+        ]
+    },
+    "linkedin": {
+        "platform": "linkedin",
+        "query": "fernanda-holanda",
+        "status": "Not Found / Blocked"
+    }
+}
