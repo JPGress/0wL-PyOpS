@@ -21,7 +21,7 @@ def test_nmap_xml():
 
 
 def test_nmap_backend_argv_and_artifact(tmp_path, monkeypatch):
-    def backend(argv, timeout):
+    def backend(argv, timeout, check=True):
         assert argv[-1] == "192.0.2.1"
         assert argv[argv.index("-p") + 1] == "80,443"
         Path(argv[argv.index("-oX") + 1]).write_text('<nmaprun><host><address addr="192.0.2.1"/><ports><port portid="80" protocol="tcp"><state state="open"/></port></ports></host></nmaprun>')

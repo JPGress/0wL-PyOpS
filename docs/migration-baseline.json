@@ -1,0 +1,17 @@
+{
+  "source_repository": "owl-ops",
+  "source_head": "1c0f8f854d06f5f082bdf213e227f9e198c18357",
+  "pyops_start_head": "4bc4776",
+  "attck_version": "19.2",
+  "source_files": {
+    "0wlops.sh": {
+      "sha256": "76bfe98f392cca070a65ba03f2d033136598ef1facee6553200483992a4161bf",
+      "lines": 4459
+    },
+    "0wlops_unstable.sh": {
+      "sha256": "b1c66cc22dfdc22709c2a34f8909303094fc9bc062456a8a6de5219763de6d5c",
+      "lines": 4489
+    }
+  },
+  "policy": "Stable source is primary; unstable variant is comparative only; source worktree preserved."
+}

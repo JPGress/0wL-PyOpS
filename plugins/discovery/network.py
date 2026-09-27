@@ -100,12 +100,17 @@ class NmapScan(NetworkBase):
     def execute(self, p, ctx):
         hosts = targets(p["target"])
         path = ctx.artifact("nmap.xml")
-        argv = ["nmap", "-sT", "-p", ",".join(map(str, p["ports"])), "-oX", str(path)]
+        argv = ["nmap", "--unprivileged", "-sT", "-Pn", "-n", "-p", ",".join(map(str, p["ports"])), "-oX", str(path)]
         if p["service_detection"]:
             argv.append("-sV")
-        command(argv + hosts, timeout=p["timeout"])
+        stdout, stderr, code = command(argv + hosts, timeout=p["timeout"], check=False)
+        if code:
+            ctx.error(f"Nmap retornou {code}: {stderr[:2000]}")
         for item in parse_nmap(path.read_text()):
             ctx.finding(**item)
+        root = ET.fromstring(path.read_text())
+        statistics = root.find("runstats/hosts")
+        ctx.finding(section="scan_summary", hosts=dict(statistics.attrib) if statistics is not None else {})
 
 
 class ARPDiscovery(BasePlugin):

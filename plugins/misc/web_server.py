@@ -35,7 +35,11 @@ class WebServer(BasePlugin):
             log.warning("Configuração de porta cancelada.")
             return
 
-        directory = Path(input("[>] Diretório a publicar (obrigatório): ").strip()).expanduser()
+        value = input("[>] Diretório a publicar (obrigatório): ").strip()
+        if not value:
+            log.error("Informe um diretório explicitamente")
+            return
+        directory = Path(value).expanduser()
         if not directory.is_dir():
             log.error("Diretório inválido")
             return

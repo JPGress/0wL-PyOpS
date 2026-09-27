@@ -73,11 +73,13 @@ class WirelessLab(BasePlugin):
             raise Unavailable("Não foi possível identificar canal original para restauração")
         process = None
         monitor = None
-        prefix = ctx.artifact("wireless")
+        created_monitor = False
+        prefix = ctx.path("wireless")
         try:
             if "type monitor" not in info:
                 monitor = "owl" + uuid.uuid4().hex[:8]
                 command(["iw", "dev", iface, "interface", "add", monitor, "type", "monitor"])
+                created_monitor = True
                 command(["ip", "link", "set", monitor, "up"])
             active = monitor or iface
             if p.get("channel"):
@@ -101,7 +103,7 @@ class WirelessLab(BasePlugin):
                     process.collect(check=False)
                 except Exception as exc:
                     ctx.error(f"Falha ao encerrar captura: {exc}")
-            if monitor:
+            if created_monitor:
                 try:
                     command(["iw", "dev", monitor, "del"])
                 except Exception as exc:

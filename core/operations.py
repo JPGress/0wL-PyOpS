@@ -4,6 +4,7 @@ import os
 import signal
 import subprocess
 import tempfile
+import threading
 import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
@@ -36,11 +37,14 @@ class Context:
         })
         self.directory = Path(output_dir) / plugin_id / uuid.uuid4().hex
 
-    def artifact(self, name, content=None):
+    def path(self, name):
         if Path(name).name != name:
             raise ValueError("Nome de artefato inválido")
         self.directory.mkdir(parents=True, exist_ok=True, mode=0o700)
-        path = self.directory / name
+        return self.directory / name
+
+    def artifact(self, name, content=None):
+        path = self.path(name)
         if content is not None:
             with path.open("xb") as stream:
                 stream.write(content if isinstance(content, bytes) else content.encode("utf-8"))
@@ -61,6 +65,7 @@ class Context:
         self.result.finished_at = datetime.now(timezone.utc).isoformat()
         path = self.artifact("result.json")
         with path.open("x", encoding="utf-8") as stream:
+            self.result.artifacts = [item for item in self.result.artifacts if Path(item).is_file()]
             json.dump(asdict(self.result), stream, ensure_ascii=False, indent=2)
         for artifact in self.result.artifacts:
             if Path(artifact).is_file():
@@ -80,10 +85,10 @@ class Process:
                 stdout=self.stdout, stderr=self.stderr,
                 start_new_session=True,
             )
-        except FileNotFoundError as exc:
+        except OSError as exc:
             self.stdout.close()
             self.stderr.close()
-            raise Unavailable(f"Executável ausente: {argv[0]}") from exc
+            raise Unavailable(f"Executável indisponível: {argv[0]}: {exc}") from exc
 
     def stop(self):
         try:
@@ -132,6 +137,12 @@ def execute(plugin, parameters, output_dir="outputs"):
     context = Context(plugin.PLUGIN_ID, parameters, output_dir)
     context.result.attack = [m for m in plugin.ATTACK
                              if not m.get("context") or m["context"] == parameters.get("context")]
+    previous_sigterm = None
+    if threading.current_thread() is threading.main_thread():
+        previous_sigterm = signal.getsignal(signal.SIGTERM)
+        def cancelled(signum, frame):
+            raise KeyboardInterrupt()
+        signal.signal(signal.SIGTERM, cancelled)
     try:
         missing = plugin.unavailable(parameters)
         if missing:
@@ -145,6 +156,9 @@ def execute(plugin, parameters, output_dir="outputs"):
     except Exception as exc:
         context.result.status = "partial" if context.result.findings else "failed"
         context.result.errors.append(str(exc))
+    finally:
+        if previous_sigterm is not None:
+            signal.signal(signal.SIGTERM, previous_sigterm)
     try:
         return context.finish()
     except OSError as exc:
