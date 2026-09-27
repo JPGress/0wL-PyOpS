@@ -63,6 +63,7 @@ A suíte de integração abre serviços apenas em `127.0.0.1`, consulta DNS sint
 
 ## Documentação
 
+- [Manual do operador — instalação, comandos e catálogo completo](docs/manual-do-operador.md)
 - [Plano executável, matriz de portabilidade e estado dos lotes](docs/plano-portabilidade-attack.md)
 - [Arquitetura e contrato de execução](docs/architecture.md)
 - [Como desenvolver plugins](docs/plugin_tutorial.md)
