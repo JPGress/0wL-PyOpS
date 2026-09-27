@@ -9,7 +9,7 @@ class Dispatcher:
     @staticmethod
     def read_option():
         try:
-            option = input(f"\n {C.BRIGHT_GREEN}[>]{C.RESET} {C.GREEN}Enter the option number (000 to exit): {C.RESET}").strip()
+            option = input(f"\n {C.BRIGHT_GREEN}[>]{C.RESET} {C.GREEN}ID ou alias (000 para sair): {C.RESET}").strip()
             return option
         except KeyboardInterrupt:
             return "000"
@@ -30,7 +30,11 @@ class Dispatcher:
                 print(f"\n{C.BRIGHT_GREEN}[+]{C.RESET} Selected: {plugin['name']}")
                 try:
                     plugin['callback']()
+                except (KeyboardInterrupt, EOFError):
+                    log.info("Operação cancelada.")
                 except Exception as e:
                     log.error(f"Plugin execution failed: {e}")
+                from core.menu import render_menu
+                render_menu()
             else:
                 log.warning("Invalid option. Please try again.")

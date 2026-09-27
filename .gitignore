@@ -10,3 +10,12 @@ htmlcov/
 
 # Logs
 *.log
+
+# Saídas operacionais, clientes gerados e ambiente local
+/outputs/
+*_socmint.json
+/revshell_client.py
+.venv/
+*.egg-info/
+build/
+dist/

@@ -6,13 +6,15 @@ from core.registry import registry
 import os
 
 def clear_screen():
-    os.system("clear" if os.name == "posix" else "cls")
+    import sys
+    if sys.stdout.isatty():
+        print("\033[2J\033[H", end="")
 
 def show_header():
     print(ascii_banner())
     print(f"{C.BLACK}           {C.BG_BRIGHT_RED}0wL - Python Operators Script by {AUTHOR} - v{VERSION} ({RELEASE}) {C.RESET}")
     print(f"{C.RED}+====================================================================================+{C.RESET}")
-    print(f"{C.GRAY}                Select an option by entering the corresponding number{C.RESET}")
+    print(f"{C.GRAY}                Selecione pelo ID ou alias (ex.: ops:104){C.RESET}")
     print(f"{C.RED}+====================================================================================+{C.RESET}")
 
 def render_menu():
@@ -42,6 +44,12 @@ def render_menu():
             for p in plugins:
                 print(f"\n {C.BRIGHT_GREEN}[+]{C.RESET}{fg_color} {p['name']} [{tactic}]{C.RESET}")
                 print(f"         {C.GRAY}- {p['description']}{C.RESET}")
+                instance = p.get('instance')
+                if instance:
+                    availability = "; ".join(instance.unavailable())
+                    print(f"         {C.GRAY}{instance.KIND} | {instance.STATUS} | aliases: {', '.join(instance.ALIASES) or '—'}{C.RESET}")
+                    if availability:
+                        print(f"         {C.YELLOW}Indisponível: {availability}{C.RESET}")
                 print(f"         {fg_color}[{p['id']}]{C.RESET} {C.GRAY}Execute{C.RESET}")
                 print(f"         {C.GRAY}---{C.RESET}")
         print()

@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "owl-pyops"
+version = "0.2.0"
+description = "Toolkit modular de laboratório com catálogo ATT&CK"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+dns = ["dnspython>=2.6,<3"]
+web = ["requests>=2.31,<3", "beautifulsoup4>=4.12,<5"]
+socmint = ["instaloader>=4.12,<5", "requests>=2.31,<3", "beautifulsoup4>=4.12,<5"]
+dev = ["pytest>=8,<10"]
+all = ["dnspython>=2.6,<3", "requests>=2.31,<3", "beautifulsoup4>=4.12,<5", "instaloader>=4.12,<5"]
+
+[project.scripts]
+pyops = "core.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["core*", "plugins*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-m 'not integration'"
+markers = ["integration: verificações locais com backends reais; sem alvos externos"]

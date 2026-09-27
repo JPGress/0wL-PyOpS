@@ -1,34 +1,31 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
-import os
+"""Descoberta sem operações externas e sem falhas silenciosas."""
 import importlib
 import inspect
+from pathlib import Path
 from core.registry import registry
 from plugins.base import BasePlugin
 
+
 def load_plugins():
-    plugins_dir = os.path.dirname(__file__)
-    for root, _, files in os.walk(plugins_dir):
-        for file in files:
-            if file.endswith('.py') and file != '__init__.py' and file != 'base.py':
-                module_path = os.path.relpath(os.path.join(root, file), plugins_dir)
-                module_name = "plugins." + module_path.replace(os.sep, '.')[:-3]
-                
+    registry.clear()
+    root = Path(__file__).parent
+    for path in sorted(root.rglob("*.py")):
+        if path.name in ("__init__.py", "base.py"):
+            continue
+        name = "plugins." + ".".join(path.relative_to(root).with_suffix("").parts)
+        try:
+            module = importlib.import_module(name)
+            for _, cls in inspect.getmembers(module, inspect.isclass):
+                if cls.__module__ != name or not issubclass(cls, BasePlugin) or cls is BasePlugin:
+                    continue
+                if not cls.PLUGIN_ID:
+                    continue
                 try:
-                    module = importlib.import_module(module_name)
-                    for _, obj in inspect.getmembers(module, inspect.isclass):
-                        if issubclass(obj, BasePlugin) and obj is not BasePlugin:
-                            # Register the plugin into the core registry
-                            plugin_instance = obj()
-                            registry.register(
-                                plugin_id=obj.PLUGIN_ID,
-                                name=obj.NAME,
-                                group=obj.GROUP,
-                                tactic=obj.TACTIC,
-                                description=obj.DESCRIPTION,
-                                callback=plugin_instance.run
-                            )
-                except Exception as e:
-                    # Ignore silent load failures during UI startup
-                    pass
+                    plugin = cls()
+                    registry.register(plugin.PLUGIN_ID, plugin.NAME, plugin.GROUP,
+                                      plugin.TACTIC, plugin.DESCRIPTION, plugin.run, plugin)
+                except Exception as exc:
+                    registry.errors.append(f"{name}.{cls.__name__}: {exc}")
+        except Exception as exc:
+            registry.errors.append(f"{name}: {exc}")
+    return registry

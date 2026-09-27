@@ -3,19 +3,21 @@
 # Basic Web Server for OwL-PyOpS
 
 import socket
-import netifaces
 import http.server
 import socketserver
 import os
+from pathlib import Path
+from functools import partial
 from plugins.base import BasePlugin
 from core.logger import log
 
 class WebServer(BasePlugin):
     # Metadados lidos pelo core/registry.py
     PLUGIN_ID = "080"
+    DEPENDENCIES = (("executable", "ip"),)
     NAME = "Web Server"
     GROUP = "Misc"
-    TACTIC = "TA0011"
+    TACTIC = "Utilities"
     DESCRIPTION = "Usa um servidor web embutido para servir arquivos estáticos."
 
     def __init__(self):
@@ -33,22 +35,25 @@ class WebServer(BasePlugin):
             log.warning("Configuração de porta cancelada.")
             return
 
-        self.start_server(ip, port)
+        directory = Path(input("[>] Diretório a publicar (obrigatório): ").strip()).expanduser()
+        if not directory.is_dir():
+            log.error("Diretório inválido")
+            return
+        self.start_server(ip, port, directory.resolve())
 
     def select_interface(self):
-        interfaces = netifaces.interfaces()
-        active_interfaces = []
-        
-        for iface in interfaces:
-            try:
-                addrs = netifaces.ifaddresses(iface)
-                if netifaces.AF_INET in addrs:
-                    ipv4_info = addrs[netifaces.AF_INET][0]
-                    ip = ipv4_info['addr']
-                    active_interfaces.append((iface, ip))
-            except (ValueError, KeyError, IndexError):
-                continue
-                
+        from core.operations import command
+        import json
+        try:
+            raw, _, _ = command(["ip", "-json", "address", "show"])
+            active_interfaces = [(item["ifname"], address["local"])
+                                 for item in json.loads(raw)
+                                 for address in item.get("addr_info", [])
+                                 if address.get("family") == "inet"]
+        except Exception as exc:
+            log.error(f"Não foi possível listar interfaces: {exc}")
+            return None
+
         if not active_interfaces:
             log.error("Nenhuma interface de rede com IPv4 encontrada.")
             return None
@@ -89,11 +94,11 @@ class WebServer(BasePlugin):
             except ValueError:
                 log.warning("Entrada inválida. Digite um número válido.")
 
-    def start_server(self, ip, port):
+    def start_server(self, ip, port, directory):
         # Servidor estático básico usando http.server do Python
-        Handler = http.server.SimpleHTTPRequestHandler
+        Handler = partial(http.server.SimpleHTTPRequestHandler, directory=str(directory))
         
-        current_dir = os.getcwd()
+        current_dir = str(directory)
         print()
         log.info(f"Diretório base: {current_dir}")
         log.success(f"Servidor disponível em: http://{ip}:{port}/")
