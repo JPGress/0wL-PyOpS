@@ -1,3 +1,5 @@
+> Documento histórico anterior à portabilidade. O estado atual está em [plano-portabilidade-attack.md](plano-portabilidade-attack.md).
+
 # Walkthrough: Desenvolvimento do OwL's Eyes (Projeto Piloto)
 
 ## 📌 Resumo da Entrega

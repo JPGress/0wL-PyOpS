@@ -1,58 +1,43 @@
-# Documentação de Arquitetura: 0wL PyOpS
+# Arquitetura do OwL PyOpS
 
-Este documento detalha a topologia atual do projeto **0wL PyOpS**, sua lógica interna de funcionamento e as regras para escalabilidade de novas <i>features</i>.
+## Fluxo
 
----
+`pyops.py` → CLI → loader/registry → plugin → serviço Python/backend → resultado e artefatos.
 
-## 1. Visão Geral da Arquitetura
-A arquitetura do PyOpS é baseada num modelo **Modular / Orientado a Plugins**. Em vez de existir um único <i>script</i> gigante com incontáveis condições (`if/else`), o projeto foi fatiado. 
+O núcleo gerencia argumentos, catálogo, apresentação, subprocessos e relatórios. A lógica operacional reside nos plugins. A implementação de um plugin automatizável não lê `input()` nem imprime resultados diretamente: recebe parâmetros e publica achados pelo contexto.
 
-O coração do sistema (`core`) gerencia exclusivamente a renderização e o tráfego de dados, sem saber *o que* os ataques ou defesas fazem. Toda a lógica ofensiva e defensiva fica externalizada no diretório `plugins/`. Isso permite que o desenvolvimento do framework e dos recursos operacionais caminhem de forma independente.
+O menu conserva as categorias Red, Blue, Purple e Misc, mas deriva as táticas dos metadados ATT&CK. Um plugin pode aparecer em mais de uma tática; isso não cria registros de execução duplicados. Referências e utilitários sem técnica aplicável têm categorias próprias.
 
----
+## Contrato
 
-## 2. Estrutura de Diretórios e Arquivos
+`BasePlugin` fornece `PLUGIN_ID`, `ALIASES`, `NAME`, `DESCRIPTION`, `GROUP`, `KIND`, `STATUS`, `ATTACK`, `DEPENDENCIES` e dependências condicionais por operação. Implementações novas sobrescrevem:
 
-Abaixo apresentamos o papel de cada pasta e arquivo presente no diretório. Múltiplos arquivos terminados em `.md` (como `task.md`, `walkthrough.md`, `implementation_plan.md`) referem-se estritamente aos artefatos de controle de desenvolvimento.
+- `add_arguments(parser)`: declara entradas para argparse.
+- `execute(parameters, context)`: realiza o trabalho e publica resultados.
 
-### A Raiz (`./`)
-Ponto base da aplicação.
-* **`pyops.py`**: É o **Entrypoint**. Sua única atribuição é agir como um injetor/loader: importa o núcleo e aciona a ignição (ex.: `Dispatcher.run()`).
-* **`tests/`**: O diretório dedicado ao controle de qualidade (Q&A). Abriga componentes do *pytest* validando a estabilidade da orquestração principal (como atestado por `test_dispatcher.py` e `test_plugin_loader.py`).
-* ~~**`pyops/`**: Trata-se de um diretório ou pacote em "fase de transição/legado" contendo apenas subdiretórios de cache gerados no passado (`__pycache__`). Este diretório não é ativamente importado pela aplicação modular hoje.~~ \[CORRIGIDO]
+`run()` apresenta ajuda, coleta os argumentos via uma linha no menu e usa exatamente o mesmo parser e executor da CLI. Plugins antigos que implementam apenas `run()` continuam no menu, mas não aceitam execução automatizada. O contrato evita misturar prompts com automações; não existe sandbox de plugins.
 
-### O Núcleo do Sistema (`core/`)
-Lida unicamente com infraestrutura e interface de usuário. É o "chassi" do carro.
-* **`config.py`**: Guarda metadados do aplicativo, banners em ASCII e a paleta de cores padrão (Dicionário ou Classe `C`).
-* **`logger.py`**: Abstrai os modos de exibição e os padroniza (Mensagens de Sucesso, Aviso, Erro, Informação) evitando quebras do formato visual da ferramenta.
-* **`registry.py`**: O cérebro do estado volátil. Trata-se de um Singleton/Storage. Carrega na memória RAM "quem" está habilitado, "como" acionar a função e a qual táctica/grupo tal script pertence.
-* **`menu.py`**: Módulo estritamente cosmético encarregado de ler o `registry` e formatar as seleções para o usuário sob formato de interface em linha de comando (CLI).
-* **`dispatcher.py`**: É o volante do usuário. Implementa o _loop infinito_ de captação de Input (`>` "Enter option:") e decide atrelar este input à exata função estocada na base ou reportar erro.
+O registro valida metadados e colisões antes de modificar índices. A descoberta considera apenas classes definidas no próprio módulo, em ordem determinística. Recarregar reconstrói o registro sem duplicação. Falhas são guardadas e exibidas por `doctor`/stderr. Importações não devem executar rede, abrir listeners ou modificar o sistema.
 
-### Os Motores de Operação (`plugins/`)
-Armazenam estritamente habilidades ou armas individuais. É o "motor" do carro.
-* **`base.py`**: Dispõe da classe abstrata/mãe que define a interface e parâmetros rigorosos (ID, Nome, Classe de Grupo) de integração.
-* **`attack/`**: Subdiretório para ofensiva contendo a pasta de cada tática do **MITRE ATT&CK** (como `recon.py`).
-* **`d3fend/`**: Subdiretório de scripts e ferramentas do **Blue Team / MITRE D3FEND**.
-* **`purple/` e `misc/`**: Destinados à verificação/emulação de adversário mesclada, bem como ferramentas miscelâneas que não se enquadram perfeitamente em nenhuma <i>framework</i> tática explícita.
+## Execução e persistência
 
----
+Cada execução tem diretório próprio, nomeado por UUID, dentro de `outputs`. O resultado contém:
 
-## 3. A Lógica de Execução e Fluxo (Pipeline)
+- `schema_version`, `plugin_id`, `status`, horários de início/fim;
+- parâmetros serializáveis, omitindo chaves de senha/token/segredo;
+- relações ATT&CK correspondentes ao contexto selecionado;
+- `findings`, `errors` e caminhos dos `artifacts` existentes.
 
-A aplicação inicializa-se de forma elegante:
+Estados: `success`, `partial`, `failed`, `cancelled`, `unavailable`. Uma consulta DNS válida com NXDOMAIN é um achado, não uma exceção. Timeout ou bloqueio são explicitados. Um resultado parcial não equivale à conclusão de todas as verificações.
 
-1. **Auto-Discovery:** No início da execução (dentro de `pyops.py` ou via um loader dinâmico importado pelo mesmo), uma varredura sistêmica é feita na pasta `plugins/`.
-2. **Auto-Registro:** Todo `.py` que extenda `base.py` sofre injeção imediata no dicionário armazenado em `core/registry.py`.
-3. **Mapeamento:** O aplicativo processa o agrupamento dos dados separando-os entre: Red (Attack), Blue (D3fend), Purple ou Misc, salvando e indexando a chave que engatilha eles (O ID do usuário, ex: `"001"`).
-4. **Prontidão de Comando:** `core/menu.py` lista na tela de forma limpa todas as táticas carregadas ativas e o `core/dispatcher.py` imobiliza a execução pendente e à espera de um sinal do operador.
-5. **Execução:** Dada a seleção do terminal, o código é chamado e exibe *loggers*, finalizando o script ou voltando ao menu.
+Subprocessos recebem listas de argumentos, stdin fechado e grupo de processos próprio. stdout/stderr são direcionados a arquivos temporários para evitar bloqueio de pipes; a leitura é limitada a 16 MiB por fluxo. XML, PCAP e outras saídas extensas usam artefatos dedicados. Timeout e cancelamento encerram o grupo pertencente à operação. SIGTERM é convertido em cancelamento durante a execução no thread principal, permitindo limpeza e relatório.
 
----
+As rotinas de laboratório não executam `sudo` nem encerram processos por nome. Aplicação de rotas mantém mudanças até `revert`; falhas de aplicação disparam rollback. Sessões MITM restauram forwarding; wireless remove apenas a interface monitor criada pela própria sessão e restaura o canal conhecido. SIGKILL, desligamento e mudanças concorrentes do administrador não têm garantia de rollback; os arquivos de estado servem à recuperação.
 
-## 4. Onde criar os futuros arquivos?
+## ATT&CK
 
-* **Novos Comandos de Interface ou Mecânicas Internas:** Se quiser adicionar "suporte a atalhos de teclado", "traduções na linguagem", ou conectar um banco SQLite, aloque logicamente em `core/`.
-* **Novas Técnicas Ofensivas ou Scanners:** Se escreveu um script de _Wordlist Generator_ ou _SSH Brute-Force_, isso deve se tornar uma classe herdada construída em `plugins/attack/<nome_da_ferramenta>.py`.
-* **Novos Testes Automatizados:** Todo arquivo que garanta a integridade estrutural, a saúde da ingestão de inputs (`dispatcher`) ou do sistema de descobrimento, deve continuar a repousar no diretório `tests/` para rodar na esteira CI/CD local pelo Pytest.
-* **O Diretório `pyops/`**: Pode ser fisicamente apagado (ou `rm -rf pyops/`) para livrar o projeto da sujeira de refatoração, a menos que ele abranja um segundo pacote python ativo.
+O recorte de técnicas/táticas está fixado em 19.2 no código, com links oficiais. Não depende de baixar a matriz durante a inicialização. `matrix` inclui lacunas e não contabiliza guias como ferramentas validadas. `experimental` é independente de dependências instaladas: disponibilidade não é validação operacional.
+
+## Testes e instalação
+
+`pyproject.toml` define Python >=3.11, instalação via setuptools e extras opcionais. As fontes de teste estão em `tests/`; caches foram retirados do índice. Testes unitários bloqueiam conexões externas; integrações loopback são opt-in. Backends reais que exigem laboratório específico permanecem experimentais até haver evidência adicional.

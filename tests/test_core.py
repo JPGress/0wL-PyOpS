@@ -185,3 +185,80 @@ def test_large_backend_output():
     from core.operations import command
     stdout, _, _ = command([sys.executable, "-c", "print('x' * 1000000)"])
     assert len(stdout) == 1000001
+
+
+def test_sigterm_restores_handler_and_report(tmp_path):
+    import os
+    import signal
+    class Terminates(Synthetic):
+        def execute(self, p, ctx):
+            ctx.finding(before_signal=True)
+            os.kill(os.getpid(), signal.SIGTERM)
+    original = signal.getsignal(signal.SIGTERM)
+    result = execute(Terminates(), {}, tmp_path)
+    assert result.status == "cancelled"
+    assert result.findings == [{"before_signal": True}]
+    assert signal.getsignal(signal.SIGTERM) == original
+
+
+def test_unsafe_plugin_id_rejected():
+    p = Synthetic()
+    p.PLUGIN_ID = "../outside"
+    with pytest.raises(ValueError, match="PLUGIN_ID"):
+        register(PluginRegistry(), p)
+
+
+def test_reserved_artifact_not_reported_if_missing(tmp_path):
+    ctx = Context("synthetic", {}, tmp_path)
+    ctx.artifact("not-produced.xml")
+    result = ctx.finish()
+    assert len(result.artifacts) == 1
+    assert result.artifacts[0].endswith("result.json")
+
+
+def test_dispatcher_interruption_returns_to_menu(monkeypatch):
+    from core.dispatcher import Dispatcher
+    from core.registry import registry
+    import core.menu
+    p = Synthetic()
+    def cancelled():
+        raise KeyboardInterrupt()
+    registry.clear()
+    registry.register(p.PLUGIN_ID, p.NAME, p.GROUP, p.TACTIC, p.DESCRIPTION, cancelled)
+    selections = iter(["synthetic", "000"])
+    monkeypatch.setattr(Dispatcher, "read_option", staticmethod(lambda: next(selections)))
+    seen = []
+    monkeypatch.setattr(core.menu, "render_menu", lambda: seen.append(True))
+    Dispatcher.run()
+    assert seen == [True]
+
+
+def test_http_server_blank_directory_does_not_serve(monkeypatch):
+    from plugins.misc.web_server import WebServer
+    p = WebServer()
+    monkeypatch.setattr(p, "select_interface", lambda: "127.0.0.1")
+    monkeypatch.setattr(p, "select_port", lambda: 8000)
+    monkeypatch.setattr("builtins.input", lambda prompt: "")
+    def should_not_start(*args):
+        raise AssertionError("Não deve publicar cwd implicitamente")
+    monkeypatch.setattr(p, "start_server", should_not_start)
+    p.run()
+
+
+def test_process_group_cleanup_even_when_leader_exits(tmp_path):
+    import os
+    import time
+    marker = tmp_path / "child-pid"
+    child_code = "import signal,time,os; from pathlib import Path; signal.signal(signal.SIGTERM, signal.SIG_IGN); Path(" + repr(str(marker)) + ").write_text(str(os.getpid())); time.sleep(30)"
+    parent_code = "import subprocess,sys,time; from pathlib import Path; subprocess.Popen([sys.executable,'-c'," + repr(child_code) + "]); marker=Path(" + repr(str(marker)) + ");\nwhile not marker.exists(): time.sleep(.01)"
+    process = Process([sys.executable, "-c", parent_code])
+    process.collect(timeout=5)
+    pid = int(marker.read_text())
+    proc = Path(f"/proc/{pid}/stat")
+    for _ in range(30):
+        if not proc.exists() or proc.read_text().split()[2] == "Z":
+            break
+        time.sleep(.02)
+    else:
+        os.kill(pid, 9)
+        pytest.fail("Processo filho ficou ativo depois da coleta")

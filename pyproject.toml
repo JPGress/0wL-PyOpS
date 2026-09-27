@@ -13,7 +13,7 @@ dependencies = []
 dns = ["dnspython>=2.6,<3"]
 web = ["requests>=2.31,<3", "beautifulsoup4>=4.12,<5"]
 socmint = ["instaloader>=4.12,<5", "requests>=2.31,<3", "beautifulsoup4>=4.12,<5"]
-dev = ["pytest>=8,<10"]
+dev = ["pytest>=8,<10", "dnspython>=2.6,<3", "requests>=2.31,<3", "beautifulsoup4>=4.12,<5"]
 all = ["dnspython>=2.6,<3", "requests>=2.31,<3", "beautifulsoup4>=4.12,<5", "instaloader>=4.12,<5"]
 
 [project.scripts]

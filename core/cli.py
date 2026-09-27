@@ -1,6 +1,9 @@
 import argparse
 import json
 import sys
+import os
+import platform
+from pathlib import Path
 from dataclasses import asdict
 from core.attack import VERSION, TACTICS
 from core.operations import execute, EXIT_CODES
@@ -72,7 +75,12 @@ def main(argv=None):
             print(json.dumps(asdict(result), ensure_ascii=False, indent=2))
         return EXIT_CODES[result.status]
     if args.action == "doctor":
-        print(json.dumps({"loader_errors": registry.errors, "plugins": entries}, ensure_ascii=False, indent=2))
+        environment = {"python": platform.python_version(), "platform": platform.system(),
+                       "kernel": platform.release(), "uid": os.getuid(),
+                       "interfaces": sorted(p.name for p in Path("/sys/class/net").glob("*")),
+                       "wireless_interfaces": sorted(p.parent.name for p in Path("/sys/class/net").glob("*/phy80211")),
+                       "note": "Presença de dependência/interface não comprova permissões nem validação operacional."}
+        print(json.dumps({"environment": environment, "loader_errors": registry.errors, "plugins": entries}, ensure_ascii=False, indent=2))
         return 1 if registry.errors else 0
     if args.action == "list":
         for key in ("group", "kind"):

@@ -1,107 +1,71 @@
-# 0wL PyOpS - Python Operator's Script
+# OwL PyOpS — Python Operator's Script
 
-**0wL OPS** é um toolkit avançado de Segurança Operacional (OpSec) baseado em Python, desenvolvido especificamente para testes de invasão (penetration testers), equipes de Red Team, Blue Team, Purple Team e pesquisadores de segurança. 
+Toolkit de laboratório em Python, sucessor modular do [owl-ops](../owl-ops/README.md). A portabilidade usa o comportamento das ferramentas como referência e organiza o catálogo pelo **MITRE ATT&CK Enterprise 19.2**. Os scripts Bash não são executados como backend.
 
-O objetivo principal da ferramenta é atuar como um **hub centralizado e modular**, permitindo a unificação, organização e execução de diversos scripts e ferramentas de segurança a partir de uma interface única e padronizada.
+A migração acrescenta CLI automatizável, aliases do OpS, resultados JSON e plugins para DNS, web, documentos, descoberta de rede, inventário local, SMB e operações delimitadas de laboratório. Guias são identificados como referências; opções sem implementação são lacunas. Os plugins permanecem **experimentais** até completar sua matriz de validação ambiental. Isso inclui operações que já passaram em testes locais.
 
----
+## Instalação
 
-## 🎯 Objetivo da Ferramenta
+Python **3.11 ou superior**, em Linux/Kali ou WSL2:
 
-No dia a dia de operações de segurança e testes de invasão, analistas lidam com dezenas de scripts soltos, ferramentas de OSINT, utilitários de rede e exploits. O **0wL PyOpS** resolve o problema da fragmentação ao fornecer:
-
-- **Centralização:** Um único ponto de entrada para todas as suas ferramentas personalizadas.
-- **Padronização:** Interface de usuário (UI/UX) e sistema de logs unificados para todas as operações.
-- **Escalabilidade:** Uma arquitetura de plugins robusta que facilita a adição de novos módulos sem alterar o código principal.
-- **Categorização Estratégica:** Ferramentas organizadas utilizando terminologias de mercado e frameworks reconhecidos (como MITRE ATT&CK e D3FEND).
-
----
-
-## 🏗️ Arquitetura e Estrutura
-
-O projeto abandonou a abordagem monolítica em favor de uma arquitetura modular, dividida em dois componentes principais: o **Core** (Núcleo) e o sistema de **Plugins**.
-
-### 1. Core (`core/`)
-Responsável pelas funcionalidades base do sistema, não possuindo lógica de ataque ou defesa.
-- `registry.py`: Gerencia o registro dinâmico e o armazenamento em memória de todos os plugins carregados.
-- `dispatcher.py`: Atua como o cérebro da iteração inicial. Lê a opção do usuário, busca no registro e invoca o callback (`run()`) correspondente do plugin.
-- `menu.py`: Renderiza a interface do usuário no terminal de forma amigável, listando os plugins separados por categoria.
-- `logger.py`: Fornece uma funcionalidade de log padronizada (info, erro, sucesso, aviso, debug) com esquema de cores consistente.
-- `config.py`: Armazena variáveis globais de configuração, versão, constantes de cores de terminal e o *banner* da aplicação.
-
-### 2. Sistema de Plugins (`plugins/`)
-A funcionalidade real da ferramenta reside aqui. Os módulos são carregados dinamicamente na inicialização.
-- Subdiretórios lógicos organizam a intenção do plugin:
-  - **Attack / Red:** Ferramentas ofensivas, enumeração, exploits.
-  - **D3FEND / Blue:** Ferramentas defensivas, análise, mitigação.
-  - **Purple:** Emulação de adversários e detecção combinada.
-  - **Misc:** Utilitários gerais (ex: subir servidores web rápidos, utilitários de rede).
-- Todos os plugins herdam da classe `BasePlugin` (`plugins/base.py`) e devem implementar variáveis obrigatórias (`PLUGIN_ID`, `NAME`, `GROUP`, `TACTIC`, `DESCRIPTION`) e o método principal `run()`.
-
----
-
-## 🔌 Como os Plugins Funcionam (Lógica Interna)
-
-A mágica do **0wL PyOpS** está no seu carregamento dinâmico:
-
-1. Ao iniciar, o `pyops.py` chama a função `load_plugins()` (em `plugins/__init__.py`).
-2. O script percorre automaticamente (via *reflection*) as pastas dentro de `plugins/`.
-3. Ele carrega as classes que herdam de `BasePlugin` e as registra no `PluginRegistry`, categorizando-as pelos Grupos (Red, Blue, Purple, Misc) e Táticas (ex: Reconhecimento, Exfiltração, etc.).
-4. O `menu.py` consome o os dados do Registry para plotar a interface.
-5. Quando o usuário digita a opção (ex: `001`), o `dispatcher.py` identifica o módulo através do `PLUGIN_ID` e executa a função `.run()` isoladamente.
-
----
-
-## 🚀 Instalação e Uso
-
-### Requisitos
-- Python 3.6 ou superior.
-
-### Download
-Clone o repositório na sua máquina local:
-```bash
-git clone https://github.com/SeuUsuario/owl-PyOpS.git
-cd owl-PyOpS
+```sh
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install -e '.[dns,web,dev]'
+python pyops.py doctor
 ```
 
-### Execução
-Navegue até a raiz do projeto e execute o arquivo principal:
-```bash
-# Dar permissão de execução, se necessário:
-chmod +x pyops.py
+O núcleo não exige bibliotecas externas. Extras disponíveis: `dns`, `web`, `socmint`, `dev` e `all` (dependências de funcionalidades, sem pytest). Dependências opcionais ausentes não fazem o plugin desaparecer.
 
-# Iniciar a ferramenta:
-./pyops.py
-# ou
-python3 pyops.py
+Backends são instalados separadamente pelo operador: Nmap, ExifTool, WHOIS, iproute2, arp-scan, smbclient/rpcclient, tcpdump, arpspoof e suíte Aircrack-ng conforme a ferramenta escolhida. `doctor` mostra requisitos por plugin/operação; ele não instala pacotes, testa alvos ou modifica a rede. Interface wireless e acesso à camada 2 dependem do hardware/topologia disponíveis, inclusive no WSL2.
+
+## Uso
+
+```sh
+# Menu interativo
+python pyops.py
+
+# Catálogo, ajuda, dependências e classificação
+python pyops.py list --tactic TA0043
+python pyops.py info dns_records
+python pyops.py matrix --format markdown
+
+# Consulta usando nome estável ou alias do Bash
+python pyops.py run dns_records --domain example.test --types A MX --format json
+python pyops.py run ops:104 --domain example.test --types A MX
+
+# Referências não executam os comandos exibidos
+python pyops.py run ops:001 --search rotas
+
+# Análise de documento sintético local
+python pyops.py run document_metadata --files ./fixture.pdf
 ```
 
-### Criando o Seu Próprio Plugin
-Adicionar uma nova funcionalidade é extremamente simples e não exige alteração nos arquivos `core`:
+`example.test` representa uma fixture do seu laboratório; não pressupõe um serviço DNS disponível. Para scanning, informe alvo, portas e contexto `internal` ou `external`. O programa não inicia varreduras somente por abrir o menu.
 
-1. Crie um arquivo Python (`meu_plugin.py`) na pasta apropriada (ex: `plugins/misc/`).
-2. Importe o `BasePlugin`.
-3. Defina as variáveis de classe e sobrescreva o método `run()`:
+Todos os aliases antigos estão no namespace `ops:`. `ops:001` abre a referência de rede; `001` mantém o atalho PyOpS de reconhecimento, agora associado ao scanner TCP real. `ops:901` e `ops:902` compartilham o mesmo motor Python. `043`, `080` e `tcp_rev_shell` permanecem interativos; `run` não os transforma silenciosamente em sessões interativas.
 
-```python
-from plugins.base import BasePlugin
-from core.logger import log
+Resultados ficam em `outputs/<plugin_id>/<run_id>/`, com JSON, arquivos especializados e permissões privadas quando suportadas pelo filesystem. O modo `--format json` reserva stdout ao resultado. Saídas e clientes gerados são ignorados pelo Git; dados locais preexistentes não são apagados.
 
-class MeuPlugin(BasePlugin):
-    PLUGIN_ID = "002"
-    NAME = "Meu Novo Scanner"
-    GROUP = "Red"
-    TACTIC = "Reconnaissance"
-    DESCRIPTION = "Descrição curta do que o plugin faz."
+Códigos de saída: `0` sucesso, `1` falha operacional, `2` erro de parsing dos argumentos, `3` indisponibilidade, `4` resultado parcial e `130` cancelamento. Validações condicionais feitas durante a execução retornam falha operacional com mensagem explicativa.
 
-    def run(self):
-        log.info("Iniciando o scanner...")
-        # Adicione a lógica da sua ferramenta aqui!
-        log.success("Scanner finalizado com sucesso!")
+## Testes
+
+```sh
+# Unitários: rede externa bloqueada pelas fixtures
+python -m pytest -q
+
+# Integrações opt-in: somente loopback e arquivos sintéticos
+python -m pytest -q -m integration
 ```
-4. Ao rodar o `./pyops.py`, seu plugin estará automaticamente catalogado e pronto para uso no menu!
 
----
+A suíte de integração abre serviços apenas em `127.0.0.1`, consulta DNS sintético, verifica HTTP/TCP, executa Nmap contra uma porta da fixture e ExifTool sobre documento sintético. Ela não executa MITM, deauth, mudanças reais de rotas ou consultas a alvos externos.
 
-## 🛡️ Aviso Legal
-Esta é uma ferramenta voltada para **fins educacionais** e uso profissional autorizado em ambientes onde haja consentimento prévio para a realização de testes de segurança. O autor não se responsabiliza pelo mau uso desta ferramenta.
+## Documentação
+
+- [Plano executável, matriz de portabilidade e estado dos lotes](docs/plano-portabilidade-attack.md)
+- [Arquitetura e contrato de execução](docs/architecture.md)
+- [Como desenvolver plugins](docs/plugin_tutorial.md)
+- [Baseline dos scripts de origem](docs/migration-baseline.json)
+
+Use apenas ambientes e alvos autorizados. Os mapeamentos ATT&CK descrevem comportamentos associados e não certificam cobertura integral de técnicas.

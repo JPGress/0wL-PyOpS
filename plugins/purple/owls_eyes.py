@@ -23,32 +23,24 @@ class OwlsEyesPlugin(BasePlugin):
             try:
                 print()
                 log.info("=== OwL's Eyes Hub ===")
-                print("[1] Módulo 1: OPSEC & Infrastructure")
+                print("[1] Módulo 1: OPSEC & Infrastructure (indisponível)")
                 print("[2] Módulo 2: SOCMINT & Identity")
                 print("[3] Módulo 3: Digital Footprint & Devices")
-                print("[4] Módulo 4: Breach Hunting & Credential Leaks")
-                print("[5] Módulo 5: Information Monitoring")
-                print("[6] Módulo 6: Social Engineering Mechanics")
-                print("[7] Módulo 7: Defensive Measures")
+                print("[4] Módulo 4: Breach Hunting & Credential Leaks (indisponível)")
+                print("[5] Módulo 5: Information Monitoring (indisponível)")
+                print("[6] Módulo 6: Social Engineering Mechanics (indisponível)")
+                print("[7] Módulo 7: Defensive Measures (indisponível)")
                 print("[0] Voltar ao menu principal")
                 print()
                 
                 choice = input("OwL's Eyes > ").strip()
                 
-                if choice == "1":
-                    mod1_opsec.run()
+                if choice in {"1", "4", "5", "6", "7"}:
+                    log.warning("Módulo ainda sem implementação operacional.")
                 elif choice == "2":
                     mod2_socmint.run()
                 elif choice == "3":
                     mod3_footprint.run()
-                elif choice == "4":
-                    mod4_breach.run()
-                elif choice == "5":
-                    mod5_monitor.run()
-                elif choice == "6":
-                    mod6_socialeng.run()
-                elif choice == "7":
-                    mod7_defensive.run()
                 elif choice == "0" or choice == "":
                     log.info("Saindo do OwL's Eyes...")
                     break

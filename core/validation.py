@@ -6,7 +6,10 @@ from urllib.parse import urlsplit
 
 
 def domain(value):
-    value = value.strip().rstrip(".").encode("idna").decode("ascii").lower()
+    try:
+        value = value.strip().rstrip(".").encode("idna").decode("ascii").lower()
+    except UnicodeError as exc:
+        raise argparse.ArgumentTypeError("Domínio inválido") from exc
     if len(value) > 253 or not all(re.fullmatch(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?", p) for p in value.split(".")):
         raise argparse.ArgumentTypeError("Domínio inválido")
     return value
@@ -50,7 +53,7 @@ def url(value):
     try:
         parsed.port
         host(parsed.hostname)
-    except ValueError as exc:
+    except (ValueError, argparse.ArgumentTypeError) as exc:
         raise argparse.ArgumentTypeError("URL inválida") from exc
     return value
 

@@ -2,7 +2,7 @@
   "source_repository": "owl-ops",
   "source_head": "1c0f8f854d06f5f082bdf213e227f9e198c18357",
   "pyops_start_head": "4bc4776",
-  "attck_version": "19.2",
+  "attack_version": "19.2",
   "source_files": {
     "0wlops.sh": {
       "sha256": "76bfe98f392cca070a65ba03f2d033136598ef1facee6553200483992a4161bf",

@@ -5,6 +5,7 @@ import signal
 import subprocess
 import tempfile
 import threading
+import time
 import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
@@ -95,18 +96,32 @@ class Process:
             os.killpg(self.process.pid, signal.SIGTERM)
         except ProcessLookupError:
             return
+        deadline = time.monotonic() + 3
         if self.process.poll() is None:
             try:
                 self.process.wait(timeout=3)
             except subprocess.TimeoutExpired:
-                os.killpg(self.process.pid, signal.SIGKILL)
+                pass
+        # Um filho pode sobreviver mesmo depois de o processo líder terminar.
+        while time.monotonic() < deadline:
+            try:
+                os.killpg(self.process.pid, 0)
+            except ProcessLookupError:
                 self.process.wait()
+                return
+            time.sleep(0.05)
+        try:
+            os.killpg(self.process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        self.process.wait()
 
     def collect(self, timeout=30, check=True):
         if self.collected is not None:
             return self.collected
         try:
             self.process.wait(timeout=timeout)
+            self.stop()
         except BaseException:
             self.stop()
             self.stdout.close()

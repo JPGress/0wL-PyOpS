@@ -114,3 +114,27 @@ def test_search_blocking_distinct_from_no_results(monkeypatch, tmp_path):
     assert result.status == "partial"
     assert "403" in result.errors[0]
     assert any(p.endswith("search-url.txt") for p in result.artifacts)
+
+
+def test_whois_and_certificates_distinct_sources(monkeypatch, tmp_path):
+    import requests
+    monkeypatch.setattr(dns_tools, "command", lambda *a, **kw: ("Domain Name: EXAMPLE.TEST", "", 0))
+    response = Mock()
+    response.json.return_value = [{"name_value": "www.example.test\nwww.example.test"}]
+    monkeypatch.setattr(requests, "get", lambda *a, **kw: response)
+    plugin = dns_tools.DomainIntelligence()
+    result = execute(plugin, params(plugin, "--domain", "example.test"), tmp_path)
+    assert result.status == "success"
+    assert [x["source"] for x in result.findings] == ["whois", "certificate_transparency"]
+    assert result.findings[1]["names"] == ["www.example.test"]
+
+
+def test_download_limit(monkeypatch):
+    import requests
+    response = Mock(url="https://example.test/", headers={})
+    response.__enter__ = Mock(return_value=response)
+    response.__exit__ = Mock(return_value=False)
+    response.iter_content.return_value = [b"1234", b"5678"]
+    monkeypatch.setattr(requests, "get", lambda *a, **kw: response)
+    with pytest.raises(ValueError, match="excede"):
+        web.fetch("https://example.test/", max_bytes=5)

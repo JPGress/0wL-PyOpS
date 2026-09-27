@@ -36,6 +36,11 @@ class BasePlugin:
                     found = None
                 if found is None:
                     reasons.append(f"Pacote Python ausente: {name}")
+        if parameters is None and self.OPERATION_DEPENDENCIES:
+            operations = {name: self.unavailable({self.OPERATION_KEY: name})
+                          for name in self.OPERATION_DEPENDENCIES}
+            if all(operations.values()):
+                reasons.append("Nenhuma operação disponível; consulte os requisitos por operação em info/doctor")
         return reasons
 
     def add_arguments(self, parser):
